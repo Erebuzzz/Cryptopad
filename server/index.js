@@ -22,6 +22,47 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const originMatchers = allowedOrigins.map(createOriginMatcher);
+
+if (allowedOrigins.length > 0) {
+  console.log("cryptopad-api allowing origins", allowedOrigins);
+} else {
+  console.log("cryptopad-api allowing all origins (no ALLOWED_ORIGINS set)");
+}
+
+function escapeRegex(value) {
+  return value.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&");
+}
+
+function createOriginMatcher(entry) {
+  if (entry === "*") {
+    return () => true;
+  }
+
+  if (entry.includes("*")) {
+    const pattern = `^${entry.split("*").map(escapeRegex).join(".*")}$`;
+    const regex = new RegExp(pattern);
+    return (value) => regex.test(value);
+  }
+
+  return (value) => value === entry;
+}
+
+function isOriginAllowed(origin) {
+  if (!origin || originMatchers.length === 0) {
+    return true;
+  }
+
+  return originMatchers.some((matcher) => {
+    try {
+      return matcher(origin);
+    } catch (error) {
+      console.warn("cryptopad-api origin matcher failure", error);
+      return false;
+    }
+  });
+}
+
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -31,11 +72,12 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }
 
+      console.warn("cryptopad-api blocked origin", origin);
       callback(new Error('Origin not allowed'));
     },
   })
