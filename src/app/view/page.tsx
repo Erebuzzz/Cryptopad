@@ -5,6 +5,8 @@ interface ViewPageProps {
   searchParams: Record<string, string | string[] | undefined>;
 }
 
+export const dynamic = "force-dynamic";
+
 export default function ViewPage({ searchParams }: ViewPageProps) {
   const idParam = searchParams.id;
   const keyParam = searchParams.key;
