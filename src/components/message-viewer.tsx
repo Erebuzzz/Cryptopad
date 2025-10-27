@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { deleteMessage, fetchMessage } from "@/lib/message-service";
 import { decryptMessage, inspectEncryptedPayload } from "@/utils/encryption";
 
@@ -46,6 +47,11 @@ function SelfDestructMessage({ message }: { message: string }) {
 }
 
 export function MessageViewer({ id, keyParam }: MessageViewerProps) {
+  const searchParams = useSearchParams();
+  const idFromSearch = searchParams.get("id") ?? undefined;
+  const keyFromSearch = searchParams.get("key") ?? undefined;
+  const effectiveId = useMemo(() => id ?? idFromSearch, [id, idFromSearch]);
+  const effectiveKey = useMemo(() => keyParam ?? keyFromSearch, [keyParam, keyFromSearch]);
   const [phase, setPhase] = useState<ViewerPhase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [noteMeta, setNoteMeta] = useState<NoteMeta | null>(null);
@@ -57,13 +63,13 @@ export function MessageViewer({ id, keyParam }: MessageViewerProps) {
   const [burnError, setBurnError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
+    if (!effectiveId) {
       setPhase("error");
       setError("Missing note id in the URL.");
       return;
     }
 
-    const noteId = id;
+    const noteId = effectiveId;
     let cancelled = false;
 
     async function hydrate() {
@@ -97,14 +103,14 @@ export function MessageViewer({ id, keyParam }: MessageViewerProps) {
           return;
         }
 
-        if (!keyParam) {
+        if (!effectiveKey) {
           setPhase("error");
           setError("This link is missing its secret key.");
           return;
         }
 
         try {
-          const decrypted = decryptMessage(payload.encrypted, { key: keyParam });
+          const decrypted = decryptMessage(payload.encrypted, { key: effectiveKey });
           if (cancelled) {
             return;
           }
@@ -134,7 +140,7 @@ export function MessageViewer({ id, keyParam }: MessageViewerProps) {
     return () => {
       cancelled = true;
     };
-  }, [id, keyParam]);
+  }, [effectiveId, effectiveKey]);
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -303,7 +309,7 @@ export function MessageViewer({ id, keyParam }: MessageViewerProps) {
               <button
                 type="button"
                 onClick={async () => {
-                  if (!id) {
+                  if (!effectiveId) {
                     return;
                   }
 
@@ -311,7 +317,7 @@ export function MessageViewer({ id, keyParam }: MessageViewerProps) {
                   setBurnError(null);
 
                   try {
-                    await deleteMessage(id);
+                    await deleteMessage(effectiveId);
                     setPhase("burned");
                   } catch (err) {
                     setBurnError(
