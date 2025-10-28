@@ -18,10 +18,6 @@ Cryptopad lets you jot down something sensitive, encrypt it entirely in the brow
 - **Zeabur edge worker** keeps encrypted payloads in memory and sweeps expired entries every minute.
 - **Glassmorphism UI** built with Next.js App Router + Tailwind, tuned for quick sharing.
 
-![Composer screen](docs/screenshots/composer.png)
-![Viewer screen](docs/screenshots/viewer.png)
-
-_(Drop your own screenshots into `docs/screenshots/` before sharing the repo.)_
 
 ## Getting Started
 
